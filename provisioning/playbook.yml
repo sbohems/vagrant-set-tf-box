@@ -1,0 +1,41 @@
+---
+- hosts: all
+  become: true
+  debugger: on_failed
+  # Only works on Red Hat/Fedora
+  vars:
+    packages: [ 'vim', 'httpd', 'git', 'wget', 'unzip' ]
+    terraform_version: "0.12.24"
+
+  tasks:
+    - name: Update system
+      dnf:
+        update_cache: yes
+      
+    - name: Install minimal set of packages
+      dnf:
+        name: "{{ packages }}"
+        state: latest
+      
+    - name: Update all packages
+      dnf:
+        name: "*"
+        state: latest
+
+    - name: Download Terraform
+      get_url:
+        url: https://releases.hashicorp.com/terraform/{{ terraform_version }}/terraform_{{ terraform_version }}_linux_amd64.zip
+        dest: /tmp/
+        timeout: 20
+      register: terraform_file
+    
+    - name: Unzip Terraform
+      unarchive:
+        src: "{{ item }}"
+        dest: /usr/local/bin/
+      with_items:
+      - "{{ terraform_file.dest }}"
+      when: terraform_file.status_code == 200
+
+    - name: Download Terraform configuration code
+      # TODO git clone terraform-configuration
